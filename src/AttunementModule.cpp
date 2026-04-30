@@ -120,6 +120,22 @@ namespace cmangos_module
     {
         if (!itemId)
             return;
+
+        // Prefer auto-equip so a fresh character with a 16-slot backpack
+        // doesn't run out of room before all items are granted.
+        uint16 eqDest = 0;
+        InventoryResult eqRes = player->CanEquipNewItem(NULL_SLOT, eqDest, itemId, false);
+        if (eqRes == EQUIP_ERR_OK)
+        {
+            if (Item* item = player->EquipNewItem(eqDest, itemId, true))
+            {
+                player->AutoUnequipOffhandIfNeed();
+                player->SendNewItem(item, 1, true, false);
+                return;
+            }
+        }
+
+        // Fall back to bag storage if not equippable (or no slot available).
         ItemPosCountVec dest;
         InventoryResult res = player->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, itemId, 1);
         if (res != EQUIP_ERR_OK)
@@ -436,7 +452,7 @@ namespace cmangos_module
                 "REPLACE INTO `custom_attunement_player_config` (`guid`, `option_key`, `value`) "
                 "VALUES (%u, 'boosted', 1)", guid);
 
-            player->GetSession()->SendNotification("Boosted to 60. 500 gold and starter gear in your bags.");
+            player->GetSession()->SendNotification("Boosted to 60. 500 gold and starter gear equipped.");
             playerMenu->CloseGossip();
             return true;
         }
