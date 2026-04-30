@@ -5,6 +5,7 @@
 #include "AI/ScriptDevAI/include/sc_gossip.h"
 #include "Server/DBCStores.h"
 
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -60,6 +61,8 @@ namespace cmangos_module
     float AttunementModule::ClampRate(float rate) const
     {
         const AttunementModuleConfig* cfg = GetConfig();
+        if (!std::isfinite(rate) || rate <= 0.0f)
+            return cfg->defaultRate;
         if (rate < cfg->minRate)
             rate = cfg->minRate;
         if (cfg->maxRate > 0.0f && rate > cfg->maxRate)
@@ -242,7 +245,7 @@ namespace cmangos_module
         if (action == ACTION_CUSTOM_INPUT)
         {
             float rate = static_cast<float>(std::atof(code.c_str()));
-            if (rate <= 0.0f)
+            if (!std::isfinite(rate) || rate <= 0.0f)
             {
                 player->GetSession()->SendNotification("Invalid rate. Enter a positive number such as 1.5 or 7.");
                 playerMenu->CloseGossip();
