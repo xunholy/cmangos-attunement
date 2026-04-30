@@ -68,9 +68,64 @@ namespace cmangos_module
         }
     }
 
+    // Class-specific weapons / off-hands / ranged. All blue (Q3) level 55-60.
+    // mainHand / offHand / ranged; 0 means slot is empty for this class.
+    struct ClassWeapons { uint32 mainHand; uint32 offHand; uint32 ranged; };
+
+    // Demonshear (2H sword), Hammer of the Titans (2H mace), Eaglehorn Long Bow,
+    // Heartseeker (dagger), Fang of the Crystal Spider (dagger), Skullforge Reaver (1H sword),
+    // Draconian Deflector (shield), Staff of Hale Magefire, Banshee Finger (wand),
+    // Rod of the Ogre Magi (staff), Oblivion's Touch (wand), Whiteout Staff.
+    static const ClassWeapons WEAPONS_WARRIOR  = { 13348,     0,     0 };
+    static const ClassWeapons WEAPONS_PALADIN  = { 13361, 12602,     0 };
+    static const ClassWeapons WEAPONS_HUNTER   = { 13348,     0, 13023 };
+    static const ClassWeapons WEAPONS_ROGUE    = { 12783, 13218,     0 };
+    static const ClassWeapons WEAPONS_PRIEST   = { 13000,     0, 13534 };
+    static const ClassWeapons WEAPONS_SHAMAN   = { 12796,     0,     0 };
+    static const ClassWeapons WEAPONS_MAGE     = { 18534,     0, 18761 };
+    static const ClassWeapons WEAPONS_WARLOCK  = { 18534,     0, 18761 };
+    static const ClassWeapons WEAPONS_DRUID    = { 19101,     0,     0 };
+
+    static const ClassWeapons* GetClassWeapons(uint32 classId)
+    {
+        switch (classId)
+        {
+            case CLASS_WARRIOR: return &WEAPONS_WARRIOR;
+            case CLASS_PALADIN: return &WEAPONS_PALADIN;
+            case CLASS_HUNTER:  return &WEAPONS_HUNTER;
+            case CLASS_ROGUE:   return &WEAPONS_ROGUE;
+            case CLASS_PRIEST:  return &WEAPONS_PRIEST;
+            case CLASS_SHAMAN:  return &WEAPONS_SHAMAN;
+            case CLASS_MAGE:    return &WEAPONS_MAGE;
+            case CLASS_WARLOCK: return &WEAPONS_WARLOCK;
+            case CLASS_DRUID:   return &WEAPONS_DRUID;
+            default:            return nullptr;
+        }
+    }
+
+    // Class-agnostic accessories: cloak, neck, two rings, two trinkets.
+    // All AllowableClass=-1, blue Q3, level 55-60.
+    // Hakkari Loa Cloak, Talisman of Protection, Primalist's Seal,
+    // Overlord's Crimson Band, Vigilance Charm, Cannonball Runner.
+    static const uint32 BOOST_ACCESSORIES[] = {
+        19870, 19871, 19863, 19873, 18370, 13382, 0
+    };
+
     static bool IsAttunementNPC(Creature* creature)
     {
         return creature && creature->GetEntry() == NPC_ENTRY_ATTUNEMENT;
+    }
+
+    static void GiveItem(Player* player, uint32 itemId)
+    {
+        if (!itemId)
+            return;
+        ItemPosCountVec dest;
+        InventoryResult res = player->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, itemId, 1);
+        if (res != EQUIP_ERR_OK)
+            return;
+        if (Item* item = player->StoreNewItem(dest, itemId, true))
+            player->SendNewItem(item, 1, true, false);
     }
 
     AttunementModule::AttunementModule()
@@ -358,20 +413,23 @@ namespace cmangos_module
 
             player->ModifyMoney(BOOST_GOLD_COPPER);
 
-            if (const uint32* gear = GetTierZeroSet(player->getClass()))
-            {
+            uint32 classId = player->getClass();
+
+            // Tier 0 dungeon set (8 pieces of head/shoulders/chest/wrists/hands/waist/legs/feet)
+            if (const uint32* gear = GetTierZeroSet(classId))
                 for (size_t i = 0; gear[i] != 0; ++i)
-                {
-                    uint32 itemId = gear[i];
-                    ItemPosCountVec dest;
-                    InventoryResult res = player->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, itemId, 1);
-                    if (res == EQUIP_ERR_OK)
-                    {
-                        Item* item = player->StoreNewItem(dest, itemId, true);
-                        if (item)
-                            player->SendNewItem(item, 1, true, false);
-                    }
-                }
+                    GiveItem(player, gear[i]);
+
+            // Class-agnostic accessories (cloak, neck, 2 rings, 2 trinkets)
+            for (size_t i = 0; BOOST_ACCESSORIES[i] != 0; ++i)
+                GiveItem(player, BOOST_ACCESSORIES[i]);
+
+            // Class-appropriate weapons (main / off / ranged)
+            if (const ClassWeapons* w = GetClassWeapons(classId))
+            {
+                GiveItem(player, w->mainHand);
+                GiveItem(player, w->offHand);
+                GiveItem(player, w->ranged);
             }
 
             CharacterDatabase.PExecute(
