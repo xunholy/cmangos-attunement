@@ -46,7 +46,20 @@ namespace cmangos_module
     static const uint32 T0_HUNTER[]  = {16674, 16675, 16676, 16677, 16678, 16679, 16680, 16681, 0};
     static const uint32 T0_ROGUE[]   = {16707, 16708, 16709, 16710, 16711, 16712, 16713, 16721, 0};
     static const uint32 T0_PRIEST[]  = {16690, 16691, 16692, 16693, 16694, 16695, 16696, 16697, 0};
-    static const uint32 T0_SHAMAN[]  = {16837, 16838, 16839, 16840, 16841, 16842, 16843, 16844, 0};
+    // Shaman D1 ("The Elements") only has 5 Stormcaller pieces in 1.x DB
+    // (head, shoulders, chest, legs, feet); we fill the 3 missing slots
+    // (wrists, hands, waist) with comparable blue mail level 57-58 items.
+    static const uint32 T0_SHAMAN[]  = {
+        21372, // Stormcaller's Diadem (head)
+        21376, // Stormcaller's Pauldrons (shoulders)
+        21374, // Stormcaller's Hauberk (chest)
+        21375, // Stormcaller's Leggings (legs)
+        21373, // Stormcaller's Footguards (feet)
+        18394, // Demon Howl Wristguards (wrists)
+        18527, // Harmonious Gauntlets (hands)
+        18104, // Feralsurge Girdle (waist)
+        0
+    };
     static const uint32 T0_MAGE[]    = {16682, 16683, 16684, 16685, 16686, 16687, 16688, 16689, 0};
     static const uint32 T0_WARLOCK[] = {16698, 16699, 16700, 16701, 16702, 16703, 16704, 16705, 0};
     static const uint32 T0_DRUID[]   = {16706, 16714, 16715, 16716, 16717, 16718, 16719, 16720, 0};
@@ -102,6 +115,42 @@ namespace cmangos_module
             default:            return nullptr;
         }
     }
+
+    // Weapon-skill IDs per class (null-terminated). Lifted from twinkmaster.
+    static const uint16 WEAPON_SKILLS_WARRIOR[] = { 43, 44, 45, 46, 54, 55, 136, 160, 162, 172, 173, 176, 226, 229, 473, 0 };
+    static const uint16 WEAPON_SKILLS_PALADIN[] = { 43, 44, 54, 55, 160, 162, 229, 0 };
+    static const uint16 WEAPON_SKILLS_HUNTER[]  = { 43, 44, 45, 46, 55, 136, 162, 172, 173, 176, 226, 229, 473, 0 };
+    static const uint16 WEAPON_SKILLS_ROGUE[]   = { 43, 45, 46, 54, 162, 173, 176, 226, 473, 0 };
+    static const uint16 WEAPON_SKILLS_PRIEST[]  = { 54, 136, 162, 173, 228, 0 };
+    static const uint16 WEAPON_SKILLS_SHAMAN[]  = { 44, 54, 136, 160, 162, 172, 173, 473, 0 };
+    static const uint16 WEAPON_SKILLS_MAGE[]    = { 43, 136, 162, 173, 228, 0 };
+    static const uint16 WEAPON_SKILLS_WARLOCK[] = { 43, 136, 162, 173, 228, 0 };
+    static const uint16 WEAPON_SKILLS_DRUID[]   = { 54, 136, 160, 162, 173, 473, 0 };
+
+    static const uint16 SKILL_DEFENSE = 95;
+
+    static const uint16* GetWeaponSkillsForClass(uint8 classId)
+    {
+        switch (classId)
+        {
+            case CLASS_WARRIOR: return WEAPON_SKILLS_WARRIOR;
+            case CLASS_PALADIN: return WEAPON_SKILLS_PALADIN;
+            case CLASS_HUNTER:  return WEAPON_SKILLS_HUNTER;
+            case CLASS_ROGUE:   return WEAPON_SKILLS_ROGUE;
+            case CLASS_PRIEST:  return WEAPON_SKILLS_PRIEST;
+            case CLASS_SHAMAN:  return WEAPON_SKILLS_SHAMAN;
+            case CLASS_MAGE:    return WEAPON_SKILLS_MAGE;
+            case CLASS_WARLOCK: return WEAPON_SKILLS_WARLOCK;
+            case CLASS_DRUID:   return WEAPON_SKILLS_DRUID;
+            default:            return nullptr;
+        }
+    }
+
+    // SpellFamilyName per class (Blizzard mapping). Used to filter
+    // npc_trainer_template hits to spells that actually belong to this class.
+    static const uint32 CLASS_SPELL_FAMILY[] = {
+        0, 4, 10, 9, 8, 6, 0, 11, 3, 5, 0, 7
+    };
 
     // Class-agnostic accessories: cloak, neck, two rings, two trinkets.
     // All AllowableClass=-1, blue Q3, level 55-60.
@@ -189,6 +238,49 @@ namespace cmangos_module
 
     void AttunementModule::OnInitialize()
     {
+    }
+
+    void AttunementModule::LearnWeaponSkills(Player* player, uint32 targetLevel)
+    {
+        uint16 maxSkill = static_cast<uint16>(targetLevel * 5);
+
+        if (const uint16* skills = GetWeaponSkillsForClass(player->getClass()))
+            for (const uint16* s = skills; *s; ++s)
+                player->SetSkill(*s, maxSkill, maxSkill);
+
+        player->SetSkill(SKILL_DEFENSE, maxSkill, maxSkill);
+    }
+
+    void AttunementModule::LearnClassSpells(Player* player, uint32 targetLevel)
+    {
+        uint32 classId = player->getClass();
+        uint32 expectedFamily = (classId < 12) ? CLASS_SPELL_FAMILY[classId] : 0;
+
+        auto result = WorldDatabase.PQuery(
+            "SELECT DISTINCT ntt.spell FROM npc_trainer_template ntt "
+            "JOIN creature_template ct ON ct.trainertemplateid = ntt.entry "
+            "WHERE ct.trainer_class = %u AND ntt.reqlevel <= %u AND ntt.reqlevel > 0",
+            classId, targetLevel);
+
+        if (!result)
+            return;
+
+        do
+        {
+            Field* fields = result->Fetch();
+            uint32 spellId = fields[0].GetUInt32();
+
+            const SpellEntry* spell = sSpellTemplate.LookupEntry<SpellEntry>(spellId);
+            if (!spell)
+                continue;
+
+            // Skip spells that belong to a different class family
+            if (spell->SpellFamilyName != 0 && spell->SpellFamilyName != expectedFamily)
+                continue;
+
+            if (!player->HasSpell(spellId))
+                player->learnSpell(spellId, false);
+        } while (result->NextRow());
     }
 
     void AttunementModule::OnLoadFromDB(Player* player)
@@ -426,6 +518,12 @@ namespace cmangos_module
                 player->InitTalentForLevel();
                 player->SetUInt32Value(PLAYER_XP, 0);
             }
+
+            // Teach trainer spells (Mail/Plate Specialization, etc.) and cap
+            // weapon skills so the auto-equip path that follows doesn't fail
+            // with EQUIP_ERR_PROFICIENCY_NEEDED.
+            LearnClassSpells(player, ATTUNEMENT_MAX_LEVEL);
+            LearnWeaponSkills(player, ATTUNEMENT_MAX_LEVEL);
 
             player->ModifyMoney(BOOST_GOLD_COPPER);
 

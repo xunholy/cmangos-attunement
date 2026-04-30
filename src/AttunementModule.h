@@ -35,6 +35,10 @@ namespace cmangos_module
         uint32 PickAuraSpell(float rate) const;
         float ClampRate(float rate) const;
 
+        // Boost helpers
+        void LearnClassSpells(Player* player, uint32 targetLevel);
+        void LearnWeaponSkills(Player* player, uint32 targetLevel);
+
         // guid -> rate (only present when non-default; default is implicit)
         std::unordered_map<uint32, float> m_playerRates;
 
