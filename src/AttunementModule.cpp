@@ -28,7 +28,7 @@ namespace cmangos_module
     static const uint32 NPC_TEXT_GREETING    = 50930;
     static const uint32 NPC_TEXT_CUSTOM      = 50931;
 
-    static const uint32 MAX_LEVEL = 60;
+    static const uint32 ATTUNEMENT_MAX_LEVEL = 60;
 
     // Preset rates surfaced as gossip options. Custom branch covers anything
     // in-between; the level-boost action is a separate branch.
@@ -214,10 +214,10 @@ namespace cmangos_module
 
         playerMenu->GetGossipMenu().AddMenuItem(GOSSIP_ICON_INTERACT_1, "Custom rate...", GOSSIP_SENDER_MAIN, ACTION_CUSTOM_INPUT, "", true);
 
-        if (player->GetLevel() < MAX_LEVEL)
+        if (player->GetLevel() < ATTUNEMENT_MAX_LEVEL)
         {
             char boostLabel[64];
-            snprintf(boostLabel, sizeof(boostLabel), "Boost me to level %u", MAX_LEVEL);
+            snprintf(boostLabel, sizeof(boostLabel), "Boost me to level %u", ATTUNEMENT_MAX_LEVEL);
             playerMenu->GetGossipMenu().AddMenuItem(GOSSIP_ICON_BATTLE, boostLabel, GOSSIP_SENDER_MAIN, ACTION_BOOST_TO_MAX, "", false);
         }
 
@@ -268,13 +268,13 @@ namespace cmangos_module
 
         if (action == ACTION_BOOST_TO_MAX)
         {
-            if (player->GetLevel() < MAX_LEVEL)
+            if (player->GetLevel() < ATTUNEMENT_MAX_LEVEL)
             {
-                player->GiveLevel(MAX_LEVEL);
+                player->GiveLevel(ATTUNEMENT_MAX_LEVEL);
                 player->InitTalentForLevel();
                 player->SetUInt32Value(PLAYER_XP, 0);
                 char msg[64];
-                snprintf(msg, sizeof(msg), "Boosted to level %u.", MAX_LEVEL);
+                snprintf(msg, sizeof(msg), "Boosted to level %u.", ATTUNEMENT_MAX_LEVEL);
                 player->GetSession()->SendNotification("%s", msg);
             }
             playerMenu->CloseGossip();
