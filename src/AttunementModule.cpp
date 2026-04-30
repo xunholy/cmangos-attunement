@@ -5,9 +5,9 @@
 #include "AI/ScriptDevAI/include/sc_gossip.h"
 #include "Server/DBCStores.h"
 
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
-#include <cstring>
 
 namespace cmangos_module
 {
