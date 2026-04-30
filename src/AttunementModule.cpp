@@ -1,8 +1,10 @@
 #include "AttunementModule.h"
+#include "Chat/Chat.h"
 #include "Database/DatabaseEnv.h"
 #include "Entities/Player.h"
 #include "Entities/GossipDef.h"
 #include "AI/ScriptDevAI/include/sc_gossip.h"
+#include "Globals/ObjectAccessor.h"
 #include "Server/DBCStores.h"
 
 #include <cmath>
@@ -110,7 +112,42 @@ namespace cmangos_module
     void AttunementModule::OnLogOut(Player* player)
     {
         if (player)
-            m_playerRates.erase(player->GetGUIDLow());
+        {
+            uint32 guid = player->GetGUIDLow();
+            m_playerRates.erase(guid);
+            m_lastSelection.erase(guid);
+        }
+    }
+
+    void AttunementModule::OnRegenerate(Player* player, uint8 /*power*/, uint32 /*diff*/, float& /*addedValue*/)
+    {
+        if (!IsEnabled() || !player || !player->IsInWorld())
+            return;
+
+        uint32 inspectorGuid = player->GetGUIDLow();
+        ObjectGuid currentSel = player->GetSelectionGuid();
+
+        auto it = m_lastSelection.find(inspectorGuid);
+        ObjectGuid lastSel = (it != m_lastSelection.end()) ? it->second : ObjectGuid();
+
+        if (currentSel == lastSel)
+            return;
+        m_lastSelection[inspectorGuid] = currentSel;
+
+        if (currentSel.IsEmpty() || currentSel == player->GetObjectGuid())
+            return;
+
+        Player* target = sObjectAccessor.FindPlayer(currentSel);
+        if (!target)
+            return;
+
+        float rate = GetXpRate(target->GetGUIDLow());
+        if (rate == GetConfig()->defaultRate)
+            return;
+
+        ChatHandler(player).PSendSysMessage(
+            "|cff1eff00[Attunement]|r %s walks the path of %.2gx XP.",
+            target->GetName(), rate);
     }
 
     bool AttunementModule::OnPreGiveXP(Player* player, uint32& xp, Creature* /*victim*/)
