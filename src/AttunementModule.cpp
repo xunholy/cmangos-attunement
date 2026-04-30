@@ -46,18 +46,17 @@ namespace cmangos_module
     static const uint32 T0_HUNTER[]  = {16674, 16675, 16676, 16677, 16678, 16679, 16680, 16681, 0};
     static const uint32 T0_ROGUE[]   = {16707, 16708, 16709, 16710, 16711, 16712, 16713, 16721, 0};
     static const uint32 T0_PRIEST[]  = {16690, 16691, 16692, 16693, 16694, 16695, 16696, 16697, 0};
-    // Shaman D1 ("The Elements") only has 5 Stormcaller pieces in 1.x DB
-    // (head, shoulders, chest, legs, feet); we fill the 3 missing slots
-    // (wrists, hands, waist) with comparable blue mail level 57-58 items.
+    // Shaman D1 "The Elements" — full 8-piece blue mail set (matches the
+    // other classes' T0 sets in quality and item-level).
     static const uint32 T0_SHAMAN[]  = {
-        21372, // Stormcaller's Diadem (head)
-        21376, // Stormcaller's Pauldrons (shoulders)
-        21374, // Stormcaller's Hauberk (chest)
-        21375, // Stormcaller's Leggings (legs)
-        21373, // Stormcaller's Footguards (feet)
-        18394, // Demon Howl Wristguards (wrists)
-        18527, // Harmonious Gauntlets (hands)
-        18104, // Feralsurge Girdle (waist)
+        16667, // Coif of Elements (head)
+        16669, // Pauldrons of Elements (shoulders)
+        16666, // Vest of Elements (chest)
+        16668, // Kilt of Elements (legs)
+        16670, // Boots of Elements (feet)
+        16671, // Bindings of Elements (wrists)
+        16672, // Gauntlets of Elements (hands)
+        16673, // Cord of Elements (waist)
         0
     };
     static const uint32 T0_MAGE[]    = {16682, 16683, 16684, 16685, 16686, 16687, 16688, 16689, 0};
