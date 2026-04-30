@@ -1,0 +1,59 @@
+################################################
+# Attunement Module Configuration
+################################################
+#
+# Per-player opt-in XP rate, set via the Attunement NPC at every
+# Classic starting zone. Visible aura tier reflects the player's
+# current rate so it acts as social signaling.
+#
+
+#
+#    Attunement.Enable
+#        Enable the Attunement module.
+#        Default: 0 (disabled)
+#
+
+Attunement.Enable = 0
+
+#
+#    Attunement.DefaultRate
+#        Multiplier applied when a player has never visited the NPC.
+#        Default: 1.0 (vanilla)
+#
+
+Attunement.DefaultRate = 1.0
+
+#
+#    Attunement.MinRate
+#        Minimum allowed multiplier. Players cannot pick below this.
+#        Default: 0.1
+#
+
+Attunement.MinRate = 0.1
+
+#
+#    Attunement.MaxRate
+#        Maximum allowed multiplier. Set to 0 to disable the cap (per spec).
+#        Default: 0 (uncapped)
+#
+
+Attunement.MaxRate = 0
+
+#
+#    Attunement.Aura.TierN.SpellId
+#        Spell ID of the visible aura applied for each rate bucket:
+#          Tier 1: 1.0×        (default — usually 0/no aura)
+#          Tier 2: >1×  to 2×
+#          Tier 3: >2×  to 5×
+#          Tier 4: >5×  to 25×
+#          Tier 5: >25×
+#        Set to 0 to disable the aura for a tier. Operators should pick
+#        spell IDs whose visuals match the desired flavor; defaults are
+#        zeroed so nothing applies until configured.
+#
+
+Attunement.Aura.Tier1.SpellId = 0
+Attunement.Aura.Tier2.SpellId = 0
+Attunement.Aura.Tier3.SpellId = 0
+Attunement.Aura.Tier4.SpellId = 0
+Attunement.Aura.Tier5.SpellId = 0
