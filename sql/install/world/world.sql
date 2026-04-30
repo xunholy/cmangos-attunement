@@ -37,18 +37,20 @@ INSERT INTO `creature`
   (`id`, `map`, `spawnMask`, `position_x`, `position_y`, `position_z`, `orientation`,
    `spawntimesecsmin`, `spawntimesecsmax`, `spawndist`, `MovementType`)
 VALUES
-  -- Northshire Abbey (Human start)            map 0
-  (@AttunementEntry, 0, 1, -8915.0, -135.0,  82.5, 0.0, 300, 300, 0, 0),
-  -- Coldridge Valley / Anvilmar (Dwarf, Gnome) map 0
-  (@AttunementEntry, 0, 1, -6240.0,  331.0, 383.0, 0.0, 300, 300, 0, 0),
-  -- Deathknell (Undead start)                  map 0
-  (@AttunementEntry, 0, 1,  1814.0, 1593.0,  97.0, 0.0, 300, 300, 0, 0),
-  -- Shadowglen / Aldrassil (Night Elf start)   map 1
-  (@AttunementEntry, 1, 1, 10316.0,  836.0,1326.0, 0.0, 300, 300, 0, 0),
-  -- Valley of Trials (Orc, Troll start)         map 1
-  (@AttunementEntry, 1, 1,  -616.0,-4264.0,  38.0, 0.0, 300, 300, 0, 0),
-  -- Camp Narache (Tauren start)                 map 1
-  (@AttunementEntry, 1, 1, -2917.0, -270.0,  53.0, 0.0, 300, 300, 0, 0);
+  -- Coords anchor on the canonical race-start NPC in each zone, offset
+  -- a few units so the Attuner doesn't overlap the existing creature.
+  -- Northshire Abbey (near Marshal McBride)         map 0
+  (@AttunementEntry, 0, 1, -8902.6, -158.6,   82.0, 3.14, 300, 300, 0, 0),
+  -- Coldridge Valley (near Sten Stoutarm)            map 0
+  (@AttunementEntry, 0, 1, -6214.9,  332.2,  383.7, 3.14, 300, 300, 0, 0),
+  -- Deathknell (near Shadow Priest Sarvis)           map 0
+  (@AttunementEntry, 0, 1,  1843.3, 1643.9,   97.8, 3.14, 300, 300, 0, 0),
+  -- Shadowglen (near Conservator Ilthalaine)         map 1
+  (@AttunementEntry, 1, 1, 10328.9,  830.1, 1326.5, 3.14, 300, 300, 0, 0),
+  -- Valley of Trials (near Kaltunk)                  map 1
+  (@AttunementEntry, 1, 1,  -607.4,-4247.3,   39.0, 3.14, 300, 300, 0, 0),
+  -- Camp Narache (near Grull Hawkwind)               map 1
+  (@AttunementEntry, 1, 1, -2912.7, -253.5,   53.0, 3.14, 300, 300, 0, 0);
 
 -- ------------------------------------------------------------
 -- NPC Text
