@@ -17,19 +17,22 @@ namespace cmangos_module
         ACTION_MAIN_MENU       = 100,
         ACTION_RESET_DEFAULT   = 101,
         ACTION_CUSTOM_INPUT    = 102,
+        ACTION_BOOST_TO_MAX    = 103,
 
         // Preset rate picks. Action codes encode rate × 100, offset by base.
-        // e.g. 0.5× -> 50, 1× -> 100, 5× -> 500, 100× -> 10000.
-        ACTION_RATE_BASE       = 1000,
+        // e.g. 1× -> 100, 5× -> 500, 10× -> 1000, 100× -> 10000.
+        ACTION_RATE_BASE       = 10000,
     };
 
     static const uint32 NPC_ENTRY_ATTUNEMENT = 190014;
     static const uint32 NPC_TEXT_GREETING    = 50930;
     static const uint32 NPC_TEXT_CUSTOM      = 50931;
 
-    // Preset rates surfaced as gossip options. Operators can extend the
-    // list freely; the custom input branch covers anything in-between.
-    static const float PRESET_RATES[] = { 0.5f, 1.0f, 2.0f, 3.0f, 5.0f, 10.0f, 25.0f, 50.0f, 100.0f };
+    static const uint32 MAX_LEVEL = 60;
+
+    // Preset rates surfaced as gossip options. Custom branch covers anything
+    // in-between; the level-boost action is a separate branch.
+    static const float PRESET_RATES[] = { 1.0f, 2.0f, 5.0f, 10.0f };
     static const size_t PRESET_RATES_COUNT = sizeof(PRESET_RATES) / sizeof(PRESET_RATES[0]);
 
     static bool IsAttunementNPC(Creature* creature)
@@ -211,6 +214,13 @@ namespace cmangos_module
 
         playerMenu->GetGossipMenu().AddMenuItem(GOSSIP_ICON_INTERACT_1, "Custom rate...", GOSSIP_SENDER_MAIN, ACTION_CUSTOM_INPUT, "", true);
 
+        if (player->GetLevel() < MAX_LEVEL)
+        {
+            char boostLabel[64];
+            snprintf(boostLabel, sizeof(boostLabel), "Boost me to level %u", MAX_LEVEL);
+            playerMenu->GetGossipMenu().AddMenuItem(GOSSIP_ICON_BATTLE, boostLabel, GOSSIP_SENDER_MAIN, ACTION_BOOST_TO_MAX, "", false);
+        }
+
         if (current != GetConfig()->defaultRate)
             playerMenu->GetGossipMenu().AddMenuItem(GOSSIP_ICON_INTERACT_2, "Reset to default", GOSSIP_SENDER_MAIN, ACTION_RESET_DEFAULT, "", false);
 
@@ -252,6 +262,21 @@ namespace cmangos_module
                 return true;
             }
             SetXpRate(player, rate);
+            playerMenu->CloseGossip();
+            return true;
+        }
+
+        if (action == ACTION_BOOST_TO_MAX)
+        {
+            if (player->GetLevel() < MAX_LEVEL)
+            {
+                player->GiveLevel(MAX_LEVEL);
+                player->InitTalentForLevel();
+                player->SetUInt32Value(PLAYER_XP, 0);
+                char msg[64];
+                snprintf(msg, sizeof(msg), "Boosted to level %u.", MAX_LEVEL);
+                player->GetSession()->SendNotification("%s", msg);
+            }
             playerMenu->CloseGossip();
             return true;
         }
