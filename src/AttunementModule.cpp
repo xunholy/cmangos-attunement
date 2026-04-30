@@ -31,11 +31,42 @@ namespace cmangos_module
     static const uint32 NPC_TEXT_CUSTOM      = 50931;
 
     static const uint32 ATTUNEMENT_MAX_LEVEL = 60;
+    static const uint32 BOOST_GOLD_COPPER    = 500 * 10000; // 500 gold
 
     // Preset rates surfaced as gossip options. Custom branch covers anything
     // in-between; the level-boost action is a separate branch.
     static const float PRESET_RATES[] = { 1.0f, 2.0f, 5.0f, 10.0f };
     static const size_t PRESET_RATES_COUNT = sizeof(PRESET_RATES) / sizeof(PRESET_RATES[0]);
+
+    // Tier 0 ("dungeon set 1") starter sets per Classic class.
+    // 8 pieces each: head, shoulders, chest, wrists, hands, waist, legs, feet.
+    // Terminator 0 keeps iteration simple.
+    static const uint32 T0_WARRIOR[] = {16730, 16731, 16732, 16733, 16734, 16735, 16736, 16737, 0};
+    static const uint32 T0_PALADIN[] = {16722, 16723, 16724, 16725, 16726, 16727, 16728, 16729, 0};
+    static const uint32 T0_HUNTER[]  = {16674, 16675, 16676, 16677, 16678, 16679, 16680, 16681, 0};
+    static const uint32 T0_ROGUE[]   = {16707, 16708, 16709, 16710, 16711, 16712, 16713, 16721, 0};
+    static const uint32 T0_PRIEST[]  = {16690, 16691, 16692, 16693, 16694, 16695, 16696, 16697, 0};
+    static const uint32 T0_SHAMAN[]  = {16837, 16838, 16839, 16840, 16841, 16842, 16843, 16844, 0};
+    static const uint32 T0_MAGE[]    = {16682, 16683, 16684, 16685, 16686, 16687, 16688, 16689, 0};
+    static const uint32 T0_WARLOCK[] = {16698, 16699, 16700, 16701, 16702, 16703, 16704, 16705, 0};
+    static const uint32 T0_DRUID[]   = {16706, 16714, 16715, 16716, 16717, 16718, 16719, 16720, 0};
+
+    static const uint32* GetTierZeroSet(uint32 classId)
+    {
+        switch (classId)
+        {
+            case CLASS_WARRIOR: return T0_WARRIOR;
+            case CLASS_PALADIN: return T0_PALADIN;
+            case CLASS_HUNTER:  return T0_HUNTER;
+            case CLASS_ROGUE:   return T0_ROGUE;
+            case CLASS_PRIEST:  return T0_PRIEST;
+            case CLASS_SHAMAN:  return T0_SHAMAN;
+            case CLASS_MAGE:    return T0_MAGE;
+            case CLASS_WARLOCK: return T0_WARLOCK;
+            case CLASS_DRUID:   return T0_DRUID;
+            default:            return nullptr;
+        }
+    }
 
     static bool IsAttunementNPC(Creature* creature)
     {
@@ -305,15 +336,49 @@ namespace cmangos_module
 
         if (action == ACTION_BOOST_TO_MAX)
         {
+            uint32 guid = player->GetGUIDLow();
+
+            // One-shot per character. Re-clicking is a no-op.
+            auto already = CharacterDatabase.PQuery(
+                "SELECT 1 FROM `custom_attunement_player_config` "
+                "WHERE `guid` = %u AND `option_key` = 'boosted'", guid);
+            if (already)
+            {
+                player->GetSession()->SendNotification("You have already received the boost.");
+                playerMenu->CloseGossip();
+                return true;
+            }
+
             if (player->GetLevel() < ATTUNEMENT_MAX_LEVEL)
             {
                 player->GiveLevel(ATTUNEMENT_MAX_LEVEL);
                 player->InitTalentForLevel();
                 player->SetUInt32Value(PLAYER_XP, 0);
-                char msg[64];
-                snprintf(msg, sizeof(msg), "Boosted to level %u.", ATTUNEMENT_MAX_LEVEL);
-                player->GetSession()->SendNotification("%s", msg);
             }
+
+            player->ModifyMoney(BOOST_GOLD_COPPER);
+
+            if (const uint32* gear = GetTierZeroSet(player->getClass()))
+            {
+                for (size_t i = 0; gear[i] != 0; ++i)
+                {
+                    uint32 itemId = gear[i];
+                    ItemPosCountVec dest;
+                    InventoryResult res = player->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, itemId, 1);
+                    if (res == EQUIP_ERR_OK)
+                    {
+                        Item* item = player->StoreNewItem(dest, itemId, true);
+                        if (item)
+                            player->SendNewItem(item, 1, true, false);
+                    }
+                }
+            }
+
+            CharacterDatabase.PExecute(
+                "REPLACE INTO `custom_attunement_player_config` (`guid`, `option_key`, `value`) "
+                "VALUES (%u, 'boosted', 1)", guid);
+
+            player->GetSession()->SendNotification("Boosted to 60. 500 gold and starter gear in your bags.");
             playerMenu->CloseGossip();
             return true;
         }
