@@ -181,7 +181,7 @@ namespace cmangos_module
 
         uint32 picked = PickAuraSpell(rate);
         if (picked != 0)
-            player->CastSpell(player, picked, true);
+            player->CastSpell(player, picked, TRIGGERED_OLD_TRIGGERED);
     }
 
     bool AttunementModule::OnPreGossipHello(Player* player, Creature* creature)
