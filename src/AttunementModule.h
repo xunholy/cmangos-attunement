@@ -20,6 +20,7 @@ namespace cmangos_module
         // Player hooks
         void OnLoadFromDB(Player* player) override;
         void OnLogOut(Player* player) override;
+        void OnDeleteFromDB(uint32 playerId) override;
         bool OnPreGiveXP(Player* player, uint32& xp, Creature* victim) override;
         bool OnPreGossipHello(Player* player, Creature* creature) override;
         bool OnGossipSelect(Player* player, Creature* creature, uint32 sender, uint32 action, const std::string& code, uint32 gossipListId) override;

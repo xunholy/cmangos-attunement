@@ -312,6 +312,15 @@ namespace cmangos_module
         }
     }
 
+    void AttunementModule::OnDeleteFromDB(uint32 playerId)
+    {
+        // Wipe all per-player config when the character is deleted so a
+        // recycled GUID doesn't inherit stale flags (e.g. 'boosted').
+        CharacterDatabase.PExecute(
+            "DELETE FROM `custom_attunement_player_config` WHERE `guid` = %u",
+            playerId);
+    }
+
     void AttunementModule::OnRegenerate(Player* player, uint8 /*power*/, uint32 /*diff*/, float& /*addedValue*/)
     {
         if (!IsEnabled() || !player || !player->IsInWorld())
@@ -548,6 +557,12 @@ namespace cmangos_module
             CharacterDatabase.PExecute(
                 "REPLACE INTO `custom_attunement_player_config` (`guid`, `option_key`, `value`) "
                 "VALUES (%u, 'boosted', 1)", guid);
+
+            // Force a save immediately so level + gear + money persist together
+            // with the boosted flag. Otherwise an early disconnect leaves the
+            // boosted flag (direct SQL) committed but the in-memory level
+            // change unsaved, locking the character out of re-boosting.
+            player->SaveToDB();
 
             player->GetSession()->SendNotification("Boosted to 60. 500 gold and starter gear equipped.");
             playerMenu->CloseGossip();
