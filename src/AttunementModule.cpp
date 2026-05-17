@@ -151,13 +151,57 @@ namespace cmangos_module
         0, 4, 10, 9, 8, 6, 0, 11, 3, 5, 0, 7
     };
 
-    // Class-agnostic accessories: cloak, neck, two rings, two trinkets.
-    // All AllowableClass=-1, blue Q3, level 55-60.
-    // Hakkari Loa Cloak, Talisman of Protection, Primalist's Seal,
-    // Overlord's Crimson Band, Vigilance Charm, Cannonball Runner.
-    static const uint32 BOOST_ACCESSORIES[] = {
-        19870, 19871, 19863, 19873, 18370, 13382, 0
-    };
+    // Per-class boost accessories. 6 fixed slots:
+    //   0 = cloak, 1 = neck, 2 = ring, 3 = ring, 4 = trinket, 5 = trinket.
+    // 0 leaves the slot empty (GiveItem no-ops on 0). All picks are blue
+    // Q3, lvl 55-60. The previous single class-agnostic list handed
+    // Primalist's Seal (caster ring) to Rogues, Hakkari Loa Cloak
+    // (healing cloak) to Warriors, etc. — split per class so each
+    // archetype receives stat-appropriate gear.
+    //
+    // Physical pool (AP / agi / crit):
+    //   12968 Cape of the Black Baron     +6 agi  +9 sta
+    //   12846 Mark of Fordring            +26 AP  +4 def
+    //   17713 Painweaver Band             +18 AP  +1% crit
+    //   13098 Don Julio's Band            +4 AP   +1% crit
+    //   11815 Hand of Justice             +20 AP  +2% chance extra attack
+    //   18370 Vigilance Charm             +14 sta
+    //   13382 Cannonball Runner           on-use ranged dmg (hunter-only)
+    //
+    // Caster pool (int / healing / spell power):
+    //   19870 Hakkari Loa Cloak           +18 healing  +8 spell dmg
+    //   19871 Talisman of Protection      +14 sta neck
+    //   19863 Primalist's Seal            +12 sta +12 int +healing/sd
+    //   18404 Underworld Band             +8 int   +11 healing / +5 sd
+    //   18820 Talisman of Ephemeral Power on-use +40 spell dmg (15s)
+    static const size_t ACCESSORY_SLOTS = 6;
+
+    static const uint32 ACCESSORIES_WARRIOR[ACCESSORY_SLOTS] = {12968, 12846, 17713, 13098, 11815, 18370};
+    static const uint32 ACCESSORIES_PALADIN[ACCESSORY_SLOTS] = {12968, 12846, 17713, 13098, 11815, 18370};
+    static const uint32 ACCESSORIES_HUNTER[ACCESSORY_SLOTS]  = {12968, 12846, 17713, 13098, 11815, 13382};
+    static const uint32 ACCESSORIES_ROGUE[ACCESSORY_SLOTS]   = {12968, 12846, 17713, 13098, 11815, 18370};
+    static const uint32 ACCESSORIES_PRIEST[ACCESSORY_SLOTS]  = {19870, 19871, 19863, 18404, 18820, 18370};
+    static const uint32 ACCESSORIES_SHAMAN[ACCESSORY_SLOTS]  = {12968, 12846, 17713, 13098, 11815, 18370};
+    static const uint32 ACCESSORIES_MAGE[ACCESSORY_SLOTS]    = {19870, 19871, 19863, 18404, 18820, 18370};
+    static const uint32 ACCESSORIES_WARLOCK[ACCESSORY_SLOTS] = {19870, 19871, 19863, 18404, 18820, 18370};
+    static const uint32 ACCESSORIES_DRUID[ACCESSORY_SLOTS]   = {12968, 12846, 17713, 13098, 11815, 18370};
+
+    static const uint32* GetBoostAccessories(uint32 classId)
+    {
+        switch (classId)
+        {
+            case CLASS_WARRIOR: return ACCESSORIES_WARRIOR;
+            case CLASS_PALADIN: return ACCESSORIES_PALADIN;
+            case CLASS_HUNTER:  return ACCESSORIES_HUNTER;
+            case CLASS_ROGUE:   return ACCESSORIES_ROGUE;
+            case CLASS_PRIEST:  return ACCESSORIES_PRIEST;
+            case CLASS_SHAMAN:  return ACCESSORIES_SHAMAN;
+            case CLASS_MAGE:    return ACCESSORIES_MAGE;
+            case CLASS_WARLOCK: return ACCESSORIES_WARLOCK;
+            case CLASS_DRUID:   return ACCESSORIES_DRUID;
+            default:            return nullptr;
+        }
+    }
 
     static bool IsAttunementNPC(Creature* creature)
     {
@@ -542,9 +586,11 @@ namespace cmangos_module
                 for (size_t i = 0; gear[i] != 0; ++i)
                     GiveItem(player, gear[i]);
 
-            // Class-agnostic accessories (cloak, neck, 2 rings, 2 trinkets)
-            for (size_t i = 0; BOOST_ACCESSORIES[i] != 0; ++i)
-                GiveItem(player, BOOST_ACCESSORIES[i]);
+            // Class-appropriate accessories (cloak, neck, 2 rings, 2 trinkets).
+            // Fixed-length walk so empty slots (0) don't terminate iteration.
+            if (const uint32* accessories = GetBoostAccessories(classId))
+                for (size_t i = 0; i < ACCESSORY_SLOTS; ++i)
+                    GiveItem(player, accessories[i]);
 
             // Class-appropriate weapons (main / off / ranged)
             if (const ClassWeapons* w = GetClassWeapons(classId))
